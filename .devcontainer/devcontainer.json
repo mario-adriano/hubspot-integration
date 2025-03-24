@@ -1,0 +1,21 @@
+{
+  "name": "hubspot-integration",
+  "dockerComposeFile": "compose.yaml",
+  "service": "app",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind",
+  "workspaceFolder": "/workspace",
+  "forwardPorts": [8080, 5432],
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "vscjava.vscode-java-pack",
+        "ms-azuretools.vscode-docker",
+        "redhat.vscode-yaml",
+        "vmware.vscode-spring-boot",
+        "vscjava.vscode-lombok"
+      ]
+    }
+  },
+  "remoteUser": "vscode"
+}
+  
