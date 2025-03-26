@@ -9,6 +9,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -135,14 +136,14 @@ public class HubspotService {
         HttpEntity<String> request = new HttpEntity<>(body, headers);
         RestTemplate restTemplate = this.restTemplate;
 
-        ResponseEntity<String> response = restTemplate.exchange(
-                tokenUrl,
-                HttpMethod.POST,
-                request,
-                String.class
-        );
-
         try {
+            ResponseEntity<String> response = restTemplate.exchange(
+                    tokenUrl,
+                    HttpMethod.POST,
+                    request,
+                    String.class
+            );
+
             JsonNode node = objectMapper.readTree(response.getBody());
             String newAccessToken = node.get("access_token").asText();
             long expiresIn = node.get("expires_in").asLong();
@@ -151,6 +152,14 @@ public class HubspotService {
             token.setExpiresAt(LocalDateTime.now().plusSeconds(expiresIn));
 
             return tokenRepository.save(token);
+
+        } catch (HttpClientErrorException.BadRequest e) {
+            String bodyAsString = e.getResponseBodyAsString();
+            if (bodyAsString != null && bodyAsString.contains("BAD_REFRESH_TOKEN")) {
+                tokenRepository.delete(token);
+                throw new RuntimeException("Refresh token expirado ou inválido. Token removido do sistema.", e);
+            }
+            throw e;
         } catch (Exception e) {
             throw new RuntimeException("Erro ao atualizar token de acesso", e);
         }
