@@ -1,9 +1,12 @@
 package com.techcase.hubspot_integration.controller;
 
+import org.springframework.data.domain.Page;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 
+import com.techcase.hubspot_integration.model.WebhookEvent;
 import com.techcase.hubspot_integration.service.HubspotService;
+import com.techcase.hubspot_integration.service.WebhookEventService;
 
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -14,9 +17,11 @@ import io.swagger.v3.oas.annotations.media.ExampleObject;
 public class HubspotController {
 
     private final HubspotService hubspotService;
+    private final WebhookEventService webhookEventService;
 
-    public HubspotController(HubspotService hubspotService) {
+    public HubspotController(HubspotService hubspotService, WebhookEventService webhookEventService) {
         this.hubspotService = hubspotService;
+        this.webhookEventService = webhookEventService;
     }
 
     @GetMapping("/authorize")
@@ -56,7 +61,19 @@ public class HubspotController {
 
     @PostMapping("/webhook")
     public ResponseEntity<String> handleWebhook(@RequestBody String payload) {
-        System.out.println(payload);
-        return ResponseEntity.ok("Webhook recebido com sucesso.");
+        if (webhookEventService.save(payload)) {
+            return ResponseEntity.ok("Webhook recebido com sucesso.");
+        }
+
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Erro ao salvar o webhook.");
+    }
+
+    @GetMapping("/webhook-events")
+    public ResponseEntity<Page<WebhookEvent>> getWebhookEvents(
+        @RequestHeader("Authorization") String bearerToken,
+        @RequestParam(defaultValue = "0") int page,
+        @RequestParam(defaultValue = "10") int size
+    ) {
+        return ResponseEntity.ok(webhookEventService.listWebhookEvents(page, size, bearerToken.replace("Bearer ", "")));
     }
 }

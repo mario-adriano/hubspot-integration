@@ -3,3 +3,5 @@ databaseChangeLog:
       file: db/changelog/20250326-01-create-uui-ossp-extension.yaml
   - include:
       file: db/changelog/20250326-02-create-hubspot-tokens.yaml
+  - include:
+      file: db/changelog/20250326-03-create-webhook-events.yaml
