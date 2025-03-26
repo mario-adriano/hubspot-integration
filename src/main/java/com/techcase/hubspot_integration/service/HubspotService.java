@@ -18,6 +18,7 @@ import com.techcase.hubspot_integration.model.HubspotToken;
 import com.techcase.hubspot_integration.repository.HubspotTokenRepository;
 
 import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
+import lombok.Getter;
 
 @Service
 public class HubspotService {
@@ -34,14 +35,16 @@ public class HubspotService {
     @Value("${hubspot.scope}")
     private String scope;
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    @Getter
+    private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
 
     private final HubspotTokenRepository tokenRepository;
 
-    public HubspotService(HubspotTokenRepository tokenRepository) {
+    public HubspotService(HubspotTokenRepository tokenRepository, RestTemplate restTemplate) {
         this.tokenRepository = tokenRepository;
         this.objectMapper = new ObjectMapper();
+        this.restTemplate = restTemplate;
     }
 
     public String buildAuthorizationUrl() {
@@ -74,13 +77,14 @@ public class HubspotService {
                 String.class
         );
 
+        HubspotToken token = new HubspotToken();
+
         try {
             JsonNode node = objectMapper.readTree(response.getBody());
             String accessToken = node.get("access_token").asText();
             String refreshToken = node.get("refresh_token").asText();
             long expiresIn = node.get("expires_in").asLong();
 
-            HubspotToken token = new HubspotToken();
             token.setAccessToken(accessToken);
             token.setRefreshToken(refreshToken);
             token.setExpiresAt(LocalDateTime.now().plusSeconds(expiresIn));
@@ -89,20 +93,66 @@ public class HubspotService {
             throw new RuntimeException("Erro ao processar token HubSpot", e);
         }
 
-        return response.getBody();
+        return token.getInternalToken();
     }
 
     @RateLimiter(name = "hubspot")
-    public ResponseEntity<String> createContact(String accessToken, String contactJson) {
+    public ResponseEntity<String> createContact(String token, String contactJson) {
+        HubspotToken hubspotToken = tokenRepository.findByInternalToken(token)
+                                        .orElseThrow(() -> new RuntimeException("Não encontrou token de acesso"));
+
+        if (LocalDateTime.now().isAfter(hubspotToken.getExpiresAt())) {
+            hubspotToken = refreshAccessToken(hubspotToken);
+        }
+
+        return createContactInternal(hubspotToken, contactJson, 0);
+    }
+
+    private ResponseEntity<String> createContactInternal(HubspotToken token, String contactJson, int retryCount) {
         String url = "https://api.hubapi.com/crm/v3/objects/contacts";
-        RestTemplate restTemplate = new RestTemplate();
+        RestTemplate restTemplate = this.restTemplate;
 
         HttpHeaders headers = new HttpHeaders();
-        headers.setBearerAuth(accessToken);
+        headers.setBearerAuth(token.getAccessToken());
         headers.setContentType(MediaType.APPLICATION_JSON);
 
         HttpEntity<String> request = new HttpEntity<>(contactJson, headers);
 
         return restTemplate.postForEntity(url, request, String.class);
+    }
+
+    public HubspotToken refreshAccessToken(HubspotToken token) {
+        String tokenUrl = "https://api.hubapi.com/oauth/v1/token";
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+
+        String body = "grant_type=refresh_token" +
+                "&refresh_token=" + token.getRefreshToken() +
+                "&client_id=" + clientId +
+                "&client_secret=" + clientSecret;
+
+        HttpEntity<String> request = new HttpEntity<>(body, headers);
+        RestTemplate restTemplate = this.restTemplate;
+
+        ResponseEntity<String> response = restTemplate.exchange(
+                tokenUrl,
+                HttpMethod.POST,
+                request,
+                String.class
+        );
+
+        try {
+            JsonNode node = objectMapper.readTree(response.getBody());
+            String newAccessToken = node.get("access_token").asText();
+            long expiresIn = node.get("expires_in").asLong();
+
+            token.setAccessToken(newAccessToken);
+            token.setExpiresAt(LocalDateTime.now().plusSeconds(expiresIn));
+
+            return tokenRepository.save(token);
+        } catch (Exception e) {
+            throw new RuntimeException("Erro ao atualizar token de acesso", e);
+        }
     }
 }

@@ -13,6 +13,11 @@ databaseChangeLog:
                   constraints:
                     primaryKey: true
               - column:
+                  name: internal_token
+                  type: TEXT
+                  constraints:
+                    nullable: false
+              - column:
                   name: access_token
                   type: TEXT
                   constraints:

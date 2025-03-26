@@ -8,6 +8,6 @@ import org.springframework.stereotype.Repository;
 import com.techcase.hubspot_integration.model.HubspotToken;
 
 @Repository
-public interface HubspotTokenRepository extends JpaRepository<HubspotToken, Long> {
-    Optional<HubspotToken> findByRefreshToken(String refreshToken);
+public interface HubspotTokenRepository extends JpaRepository<HubspotToken, java.util.UUID> {
+    Optional<HubspotToken> findByInternalToken(String token);
 }
