@@ -142,7 +142,3 @@ Para expor o ambiente local e testar webhooks:
 - **Limpeza automática de tokens**: Atualmente, tokens internos ficam indefinidamente no banco de dados. Uma futura melhoria pode ser a implementação de um serviço para limpeza automática desses tokens após certo período. Recomenda-se a utilização do **Spring Scheduler** ou **Quartz** para gerenciar tarefas de limpeza periódica.
 
 ---
-
-🔥 **Feito com ❤️ e Java!**
-
---- 
