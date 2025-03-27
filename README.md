@@ -143,21 +143,6 @@ Para expor o ambiente local e testar webhooks:
 
 ---
 
-## 🎯 Contribuições
-
-Contribuições são sempre bem-vindas!  
-
-📌 Para colaborar:
-
-1. **Fork** este repositório
-2. Crie uma **branch** para sua feature (`git checkout -b minha-feature`)
-3. Faça o **commit** das suas alterações (`git commit -m 'Minha nova feature'`)
-4. **Push** para a branch (`git push origin minha-feature`)
-5. Abra um **Pull Request** 🚀
-
-
----
-
 🔥 **Feito com ❤️ e Java!**
 
 --- 
