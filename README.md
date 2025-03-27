@@ -1,4 +1,3 @@
-Aqui está o README atualizado com as novas informações e melhorias sugeridas:
 
 ---
 
